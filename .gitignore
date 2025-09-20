@@ -5,3 +5,4 @@ LoRA finetuner/lora_adapter/
 LoRA finetuner/lora_adapter.gguf/
 model/
 delay test/
+discord.token
