@@ -5,6 +5,7 @@ import asyncio
 import os
 import wave
 import psutil
+from io import BytesIO
 from pynvml import *
 from llama_cpp import Llama
 
@@ -101,6 +102,16 @@ class PlusSink(discord.sinks.WaveSink):
         self.tasks={}
         self.loop=asyncio.get_event_loop()
 
+    def create_wav_bytesio(self,audio_byte):
+        buffer=BytesIO()
+        with wave.open(buffer,'wb') as wf:
+            wf.setnchannels(2)
+            wf.setsampwidth(2)
+            wf.setframerate(48000)
+            wf.writeframes(audio_byte)
+        buffer.seek(0)
+        return buffer
+
     def write(self, data, user):
         user_id=user
         if user_id not in self.audio:
@@ -121,32 +132,12 @@ class PlusSink(discord.sinks.WaveSink):
 
     async def process_audio(self, user_id):
         audio_bytes=b''.join(self.audio[user_id])
-        temp_wav=f"temp_{user_id}.wav"
-        with wave.open(temp_wav,'wb') as wav_file:
-            wav_file.setnchannels(2)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(48000)
-            wav_file.writeframes(audio_bytes)
-        stt_result=stt_model.transcribe(temp_wav)
+        wav_buffer=self.create_wav_bytesio(audio_bytes)
+        stt_result=stt_model.transcribe(wav_buffer)
         text=stt_result["text"].strip()
         if text:
             await gctx.send(f"{user_id}: {text}")
-            #await gctx.send(f"{user_id}: {text}\n")
-            #threading.Thread(
-            #    target=llm_model.create_chat_completion,
-            #    kwargs={
-            #        "messages":[
-            #        {"role": "system", "content": "You must use korean."},
-            #        {"role": "user", "content": f"{user_id}: {text}\n"},
-            #        ],
-            #        "max_tokens":1024,
-            #        "temperature":0.8
-            #    }
-            #)
-            #threading.Thread(target=llm_input,args=(gctx,user_id,text)).start()
-            #await asyncio.to_thread(llm_input,gctx,user_id,text)
             await llm_input(gctx,user_id,text)
-        os.remove(temp_wav)
         del self.audio[user_id]
         del self.last_speak_time[user_id]
 
@@ -166,6 +157,7 @@ async def callback(sink, ctx):
 async def leave(ctx):
     if ctx.voice_client:
         ctx.voice_client.stop_recording()
+
 
 script_dir=os.path.dirname(os.path.abspath(__file__))
 token_file_path=os.path.join(script_dir, 'discord.token')
