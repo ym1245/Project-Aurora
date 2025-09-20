@@ -1,0 +1,7 @@
+.idea/
+LoRA finetuner/dataset.json
+LoRA finetuner/llama.cpp/
+LoRA finetuner/lora_adapter/
+LoRA finetuner/lora_adapter.gguf/
+model/
+delay test/
