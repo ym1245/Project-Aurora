@@ -6,3 +6,4 @@ LoRA finetuner/lora_adapter.gguf/
 model/
 delay test/
 discord.token
+__pycache__/
